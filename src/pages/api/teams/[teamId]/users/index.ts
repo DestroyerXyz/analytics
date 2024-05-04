@@ -1,13 +1,13 @@
 import { canAddUserToTeam, canViewTeam } from 'lib/auth';
 import { useAuth, useValidate } from 'lib/middleware';
 import { pageInfo } from 'lib/schema';
-import { NextApiRequestQueryBody, SearchFilter } from 'lib/types';
+import { NextApiRequestQueryBody, PageParams } from 'lib/types';
 import { NextApiResponse } from 'next';
 import { badRequest, methodNotAllowed, ok, unauthorized } from 'next-basics';
 import { createTeamUser, getTeamUser, getTeamUsers } from 'queries';
 import * as yup from 'yup';
 
-export interface TeamUserRequestQuery extends SearchFilter {
+export interface TeamUserRequestQuery extends PageParams {
   teamId: string;
 }
 
@@ -25,7 +25,7 @@ const schema = {
     userId: yup.string().uuid().required(),
     role: yup
       .string()
-      .matches(/team-member|team-view-only/i)
+      .matches(/team-member|team-view-only|team-manager/i)
       .required(),
   }),
 };
@@ -44,8 +44,6 @@ export default async (
       return unauthorized(res);
     }
 
-    const { query, page, pageSize } = req.query;
-
     const users = await getTeamUsers(
       {
         where: {
@@ -63,11 +61,7 @@ export default async (
           },
         },
       },
-      {
-        query,
-        page,
-        pageSize,
-      },
+      req.query,
     );
 
     return ok(res, users);
